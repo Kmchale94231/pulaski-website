@@ -11,8 +11,8 @@ Built in-house to avoid BeatStars/Airbit monthly fees, so running costs should s
 | Hosting | Vercel Hobby (free) for now. Hobby is non-commercial only: decide on Pro ($20/mo) or Netlify free before taking real sales |
 | Database, admin login, previews | Supabase (free tier): Postgres for beats/orders, Auth for the admin, Storage for 30s previews + cover art |
 | Full files (MP3 / WAV / stems) | Google Drive. Admin uploads them to Drive by hand and pastes one share link per tier into the beat's admin form |
-| Payments | Stripe Checkout (hosted) |
-| Delivery | Stripe webhook → email (Resend) with the Drive link for the bought tier + filled license PDF |
+| Payments | PayPal Checkout (Orders API: server creates the order at our price, buyer approves in PayPal's popup, server captures) |
+| Delivery | After a successful capture → email (Resend) with the Drive link for the bought tier + filled license PDF |
 | Player | Native `<audio>`, persistent bottom bar |
 
 ## Pages
@@ -22,9 +22,9 @@ Built in-house to avoid BeatStars/Airbit monthly fees, so running costs should s
 
 ## Rules
 
-- **Admin access:** public sign-ups disabled in Supabase; admin pages also check the admin email. Row-level security: public can only read beats.
-- **Exclusive:** buying it removes the beat from the store and blocks further leases. Availability is checked when checkout starts. If a payment arrives for a beat that is already sold, the webhook refunds it through Stripe and emails the buyer. This path gets a test.
-- **Webhook:** verify Stripe's signature on every call; store each Stripe checkout session ID once (unique column) so Stripe's retries do nothing.
+- **Admin access:** public sign-ups disabled in Supabase; admin pages also check the admin email, kept in the `ADMIN_EMAIL` env var (not in the repo). Row-level security: public can only read unsold beats.
+- **Exclusive:** buying it removes the beat from the store and blocks further leases. Before capturing an exclusive payment, the server marks the beat sold in one atomic update (`... where id = $1 and not sold`); if no row changed, it doesn't capture, so the buyer is never charged. If the capture then fails, it un-marks the beat. This path gets a test.
+- **Orders:** store each PayPal order ID once (unique column) so a double-click or retry can't create two orders or two emails.
 - **Keep-alive:** a daily scheduled ping (Vercel Cron or GitHub Actions) so Supabase's free project is never paused for inactivity.
 - **License PDF:** one template per tier, filled with buyer name, beat title, date. Contract text supplied later.
 - **Previews:** 30s, voice tag already in the audio. Admin picks the tagged MP3 and a start time; the admin page cuts the clip in the browser with ffmpeg.wasm using a stream copy (no re-encode). Only the small clip is uploaded, so it stays under Vercel's request size limit.
@@ -51,7 +51,7 @@ Checkout: one beat + one tier per purchase, no cart. Stripe only (no PayPal for 
 ## Workflow
 
 - Git + GitHub. `main` = production; every branch gets a Vercel preview URL.
-- Stripe test mode until launch. Secrets in `.env.local` / Vercel env vars, never committed.
+- PayPal sandbox until launch. Secrets in `.env.local` / Vercel env vars, never committed.
 
 ## Open questions
 
