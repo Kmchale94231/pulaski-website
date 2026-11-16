@@ -10,7 +10,7 @@ Built in-house to avoid BeatStars/Airbit monthly fees, so running costs should s
 | Framework | Next.js (App Router) + TypeScript, Tailwind CSS |
 | Hosting | Vercel Hobby (free) for now. Hobby is non-commercial only: decide on Pro ($20/mo) or Netlify free before taking real sales |
 | Database, admin login, previews | Supabase (free tier): Postgres for beats/orders, Auth for the admin, Storage for 30s previews + cover art |
-| Full files (MP3 / WAV / stems) | Google Drive. Admin uploads them to Drive by hand and pastes one share link per tier into the beat's admin form |
+| Full files (MP3 / WAV / stems) | Google Drive. Admin uploads them to Drive by hand and pastes three share links per beat (MP3, WAV, stems); the email sends the links the bought tier includes |
 | Payments | PayPal Checkout (Orders API: server creates the order at our price, buyer approves in PayPal's popup, server captures) |
 | Delivery | After a successful capture → email (Resend) with the Drive link for the bought tier + filled license PDF |
 | Player | Native `<audio>`, persistent bottom bar |
@@ -27,7 +27,7 @@ Built in-house to avoid BeatStars/Airbit monthly fees, so running costs should s
 - **Orders:** store each PayPal order ID once (unique column) so a double-click or retry can't create two orders or two emails.
 - **Keep-alive:** a daily scheduled ping (Vercel Cron or GitHub Actions) so Supabase's free project is never paused for inactivity.
 - **License PDF:** one template per tier, filled with buyer name, beat title, date. Contract text supplied later.
-- **Previews:** 30s, voice tag already in the audio. Admin picks the tagged MP3 and a start time; the admin page cuts the clip in the browser with ffmpeg.wasm using a stream copy (no re-encode). Only the small clip is uploaded, so it stays under Vercel's request size limit.
+- **Previews:** 30s, voice tag already in the audio. Admin picks the tagged MP3 and a start time; the admin page cuts the clip in the browser by slicing the MP3's bytes (no library, no re-encode; switch to ffmpeg.wasm only if VBR files come out the wrong length). Only the small clip is uploaded, so it stays under Vercel's request size limit.
 
 ## License tiers
 
@@ -56,7 +56,6 @@ Checkout: one beat + one tier per purchase, no cart. Stripe only (no PayPal for 
 ## Open questions
 
 - [ ] Are delivered files untagged?
-- [ ] Drive layout: one folder per tier, or one link per file type (MP3 / WAV / stems)?
 - [ ] Contract PDFs (one per tier).
 - [ ] Guest checkout only, or buyer accounts?
 - [ ] Catalog size and filters (BPM, key, genre, mood, search).
